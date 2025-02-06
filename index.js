@@ -7,6 +7,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 
+// Function to check if a number is prime
 const isPrime = (n) => {
   if (n < 2) return false;
   for (let i = 2; i <= Math.sqrt(n); i++) {
@@ -15,6 +16,7 @@ const isPrime = (n) => {
   return true;
 };
 
+// Function to check if a number is perfect
 const isPerfect = (n) => {
   if (n < 2) return false;
   let sum = 1;
@@ -27,42 +29,59 @@ const isPerfect = (n) => {
   return sum === n;
 };
 
+// Function to check if a number is an Armstrong number
 const isArmstrong = (n) => {
-  const digits = Math.abs(n).toString().split('').map(Number);
+  const digits = Math.abs(n).toString().split('');
   const power = digits.length;
-  const sum = digits.reduce((acc, d) => acc + d ** power, 0);
+  const sum = digits.reduce((acc, d) => acc + Math.pow(parseInt(d), power), 0);
   return sum === Math.abs(n);
 };
 
-const digitSum = (n) => Math.abs(n)
-  .toString()
-  .split('')
-  .reduce((acc, d) => acc + parseInt(d), 0);
+// Function to calculate the sum of digits
+const digitSum = (n) =>
+  Math.abs(n)
+    .toString()
+    .split('')
+    .reduce((acc, d) => acc + parseInt(d), 0);
 
 app.get('/api/classify-number', async (req, res) => {
-  const { number: numberParam } = req.query;
+  const numberParam = req.query.number;
 
-  if (!numberParam || isNaN(numberParam)) {
+  // Check if the number is provided
+  if (!numberParam) {
+    return res.status(400).json({ number: "undefined", error: true });
+  }
+
+  // Validate that the input is a number
+  const number = parseInt(numberParam);
+  if (isNaN(number)) {
     return res.status(400).json({ number: numberParam, error: true });
   }
 
-  const number = parseInt(numberParam);
+  // Compute properties
   const prime = isPrime(number);
   const perfect = isPerfect(number);
   const armstrong = isArmstrong(number);
   const ds = digitSum(number);
-  const properties = armstrong ? ['armstrong', number % 2 === 0 ? 'even' : 'odd'] : [number % 2 === 0 ? 'even' : 'odd'];
 
-  let funFact = 'No fun fact available at the moment.';
+  let properties = [];
+  if (armstrong) properties.push('armstrong');
+  properties.push(number % 2 === 0 ? 'even' : 'odd');
+
+  // Fetch fun fact
+  let funFact = 'No fun fact available.';
   try {
     const response = await fetch(`http://numbersapi.com/${number}/math?json`);
     if (response.ok) {
       const data = await response.json();
-      funFact = data.text;
+      funFact = data.text || funFact;
     }
-  } catch (err) {}
+  } catch (error) {
+    console.error('Error fetching fun fact:', error);
+  }
 
-  res.json({
+  // Return the structured response
+  return res.status(200).json({
     number,
     is_prime: prime,
     is_perfect: perfect,
